@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Charging Analytics – ChargeSense{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <div class="workspace-subtitle">
+                <i class="fa-solid fa-chart-line me-1"></i> Battery Telemetry &amp; Regression Analytics
+            </div>
+            <h1 class="workspace-title mb-1">Charging Analytics &amp; Performance Trends</h1>
+            <p class="text-muted small mb-0" style="color: var(--ink-secondary) !important;">
+                Interactive Chart.js visualizations covering battery telemetry, speed dynamics, and CC-CV regression accuracy.
+            </p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <span class="live-badge">
+                <i class="fa-solid fa-database me-1" style="color: var(--spruce);"></i> Aggregate Telemetry
+            </span>
+        </div>
+    </div>
+
+    <!-- Battery Performance KPI Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="kpi-stat-card">
+                <div class="kpi-stat-label">
+                    <span>TOTAL SESSIONS</span>
+                    <i class="fa-solid fa-bolt" style="color: var(--spruce);"></i>
+                </div>
+                <div class="kpi-stat-val">{{ total_sessions }}</div>
+                <div class="kpi-stat-sub">Logged in database</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="kpi-stat-card">
+                <div class="kpi-stat-label">
+                    <span>COMPLETED CYCLES</span>
+                    <i class="fa-solid fa-circle-check" style="color: var(--success);"></i>
+                </div>
+                <div class="kpi-stat-val" style="color: var(--spruce);">{{ completed_sessions }}</div>
+                <div class="kpi-stat-sub">Reached target limit</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="kpi-stat-card">
+                <div class="kpi-stat-label">
+                    <span>AVG DURATION</span>
+                    <i class="fa-solid fa-stopwatch" style="color: var(--ochre-dark);"></i>
+                </div>
+                <div class="kpi-stat-val" style="color: var(--ochre-dark);">{{ avg_duration }} <span style="font-size: 1rem; font-weight: normal; font-family: 'Inter';">min</span></div>
+                <div class="kpi-stat-sub">Per charging session</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="kpi-stat-card">
+                <div class="kpi-stat-label">
+                    <span>AVG CHARGE GAIN</span>
+                    <i class="fa-solid fa-arrow-trend-up" style="color: var(--info);"></i>
+                </div>
+                <div class="kpi-stat-val" style="color: var(--ink);">+{{ avg_gain }}%</div>
+                <div class="kpi-stat-sub">Battery increase per session</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive Charts Grid -->
+    <div class="row g-4">
+        <!-- Chart 1: Battery % vs Time -->
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <div class="card-panel-header">
+                    <div>
+                        <span class="card-panel-label" style="color: var(--spruce);">CHARGE ACCUMULATION</span>
+                        <h6 class="card-panel-title mb-0">Battery Percentage vs Time</h6>
+                    </div>
+                    <span class="speed-badge">TELEMETRY</span>
+                </div>
+                <div style="height: 280px;">
+                    <canvas id="analyticsTimelineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 2: Historical Charging Duration Comparison -->
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <div class="card-panel-header">
+                    <div>
+                        <span class="card-panel-label" style="color: var(--ochre-dark);">SESSION DURATIONS</span>
+                        <h6 class="card-panel-title mb-0">Charging Time by Session</h6>
+                    </div>
+                    <span class="speed-badge">HISTORICAL</span>
+                </div>
+                <div style="height: 280px;">
+                    <canvas id="analyticsDurationsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 3: Predicted vs Actual Charging Time -->
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <div class="card-panel-header">
+                    <div>
+                        <span class="card-panel-label" style="color: var(--spruce);">MODEL BENCHMARK</span>
+                        <h6 class="card-panel-title mb-0">Baseline vs AI CC-CV Duration</h6>
+                    </div>
+                    <span class="optimal-badge">PHYSICS REGRESSION</span>
+                </div>
+                <div style="height: 280px;">
+                    <canvas id="analyticsPredVsActualChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chart 4: Multiple Charging Scenarios Comparison -->
+        <div class="col-lg-6">
+            <div class="card-panel h-100">
+                <div class="card-panel-header">
+                    <div>
+                        <span class="card-panel-label" style="color: var(--ochre-dark);">POWER PROFILES</span>
+                        <h6 class="card-panel-title mb-0">Charging Scenarios Comparison</h6>
+                    </div>
+                    <span class="live-badge"><span class="pulse-dot"></span> 5W / 15W / 30W</span>
+                </div>
+                <div style="height: 280px;">
+                    <canvas id="analyticsScenariosChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Architecture Card -->
+        <div class="col-12">
+            <div class="card-panel card-panel-highlight d-flex align-items-center gap-3">
+                <i class="fa-solid fa-circle-check fs-3" style="color: var(--spruce);"></i>
+                <div style="color: var(--ink-secondary); font-size: 0.85rem;">
+                    <strong style="color: var(--ink);">ChargeSense Electrochemical Telemetry:</strong> All charging curves and time predictions are dynamically calculated using empirical Constant Current / Constant Voltage (CC-CV) battery dynamics and laptop Windows ACPI power readings.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/charts.js') }}?v=4.5"></script>
+{% endblock %}

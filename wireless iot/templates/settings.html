@@ -1,0 +1,160 @@
+{% extends 'base.html' %}
+
+{% block title %}User Settings – ChargeSense{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="mb-4">
+        <h2 class="fw-bold text-light mb-1">User Settings & Preferences</h2>
+        <p class="text-secondary small mb-0">Configure simulation parameters, default target percentages, and account profile.</p>
+    </div>
+
+    <form method="POST" action="{{ url_for('settings.update_settings') }}">
+        <div class="row g-4">
+            <!-- Profile Settings -->
+            <div class="col-lg-6">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="fw-bold text-light mb-3">
+                        <i class="fa-solid fa-user-gear text-info me-2"></i>Account Profile
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold">Username</label>
+                        <input type="text" class="form-control bg-dark border-secondary text-muted" value="{{ current_user.username }}" disabled>
+                        <div class="form-text text-muted small">Username cannot be changed.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold">Full Name</label>
+                        <input type="text" name="full_name" class="form-control bg-dark border-secondary text-light" value="{{ current_user.full_name }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold">Email Address</label>
+                        <input type="email" name="email" class="form-control bg-dark border-secondary text-light" value="{{ current_user.email }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold">
+                            <i class="fa-solid fa-phone text-success me-1"></i>Registered Phone Number for SMS Alerts
+                        </label>
+                        <div class="input-group">
+                            <input type="tel" name="phone_number" id="settingsPhoneNumber" class="form-control bg-dark border-secondary text-light" placeholder="e.g. +91 9876543210 or 10-digit number" value="{{ current_user.phone_number or (settings.phone_number if settings else '') }}">
+                            <button type="button" class="btn btn-outline-custom" onclick="sendTestSMS()" title="Send verification SMS to this number">
+                                <i class="fa-solid fa-paper-plane text-info me-1"></i> Test SMS
+                            </button>
+                        </div>
+                        <div class="form-text text-muted small">ChargeSense will automatically dispatch an SMS alert to this number when your battery hits the charging target.</div>
+                    </div>
+
+                    <div class="mb-3 pt-2 border-top border-secondary">
+                        <label class="form-label text-secondary small fw-bold">Change Password</label>
+                        <input type="password" name="new_password" class="form-control bg-dark border-secondary text-light" placeholder="Leave blank to keep current password">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulation & System Preferences -->
+            <div class="col-lg-6">
+                <div class="glass-card p-4 h-100">
+                    <h5 class="fw-bold text-light mb-3">
+                        <i class="fa-solid fa-sliders text-success me-2"></i>Simulation Preferences
+                    </h5>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold">Default Target Battery Percentage</label>
+                        <div class="input-group">
+                            <input type="number" name="default_target_percentage" class="form-control bg-dark border-secondary text-light" min="20" max="100" step="5" value="{{ settings.default_target_percentage }}">
+                            <span class="input-group-text bg-dark border-secondary text-secondary">%</span>
+                        </div>
+                        <div class="form-text text-muted small">Recommended: 80% to maximize lithium-ion battery health.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold">Default Charging Speed Scenario</label>
+                        <select name="default_charging_speed" class="form-select bg-dark border-secondary text-light">
+                            <option value="slow" {% if settings.default_charging_speed == 'slow' %}selected{% endif %}>Slow (~0.5% / min &bull; 5W USB)</option>
+                            <option value="normal" {% if settings.default_charging_speed == 'normal' %}selected{% endif %}>Normal (~1.0% / min &bull; 15W Standard)</option>
+                            <option value="fast" {% if settings.default_charging_speed == 'fast' %}selected{% endif %}>Fast Turbo (~2.0% / min &bull; 30W+)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label text-secondary small fw-bold">Theme Appearance</label>
+                        <select name="theme" class="form-select bg-dark border-secondary text-light">
+                            <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>Dark Navy Theme (Recommended)</option>
+                            <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>Light Theme</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3 pt-2 border-top border-secondary">
+                        <label class="form-label text-secondary small fw-bold">Target Reached Alerts & Alarms</label>
+                        
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="buzzer_alerts_enabled" id="buzzerAlertsToggle" {% if settings.buzzer_alerts_enabled %}checked{% endif %}>
+                            <label class="form-check-label text-light small fw-bold" for="buzzerAlertsToggle">
+                                <i class="fa-solid fa-volume-high text-warning me-1"></i> Continuous Audio Buzzer Alarm
+                            </label>
+                            <div class="text-muted small ps-1">Sounds a continuous buzzer alarm and voice alert when target is reached until charger is unplugged.</div>
+                        </div>
+
+                        <div class="form-check form-switch mb-3">
+                            <input class="form-check-input" type="checkbox" name="sms_alerts_enabled" id="smsAlertsToggle" {% if settings.sms_alerts_enabled %}checked{% endif %}>
+                            <label class="form-check-label text-light small fw-bold" for="smsAlertsToggle">
+                                <i class="fa-solid fa-comment-sms text-success me-1"></i> Mobile SMS Alerts to Registered Number
+                            </label>
+                            <div class="text-muted small ps-1">Dispatches SMS to your registered phone number when charging finishes.</div>
+                        </div>
+
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" name="browser_notifications_enabled" id="browserNotifsToggle" {% if settings.browser_notifications_enabled %}checked{% endif %}>
+                            <label class="form-check-label text-light small" for="browserNotifsToggle">Browser Desktop Alerts</label>
+                        </div>
+                        <button type="button" class="btn btn-outline-custom btn-sm" onclick="requestBrowserNotifications()">
+                            <i class="fa-solid fa-bell me-1"></i> Request Desktop Permission
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 text-end">
+                <button type="submit" class="btn btn-brand px-4 py-2">
+                    <i class="fa-solid fa-floppy-disk me-2"></i>Save Settings & Preferences
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function sendTestSMS() {
+    const phoneInput = document.getElementById('settingsPhoneNumber');
+    const phone = phoneInput ? phoneInput.value.trim() : '';
+
+    if (!phone) {
+        showToast('Phone Number Required', 'Please enter your mobile phone number first.', 'warning');
+        phoneInput.focus();
+        return;
+    }
+
+    showToast('Dispatching...', `Sending test alert to ${phone}...`, 'info');
+
+    fetch('/api/settings/test-sms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone_number: phone })
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res.success) {
+            showToast('SMS Dispatched!', res.message, 'success');
+        } else {
+            showToast('Error', res.error, 'danger');
+        }
+    })
+    .catch(() => showToast('Error', 'Failed to reach SMS dispatcher.', 'danger'));
+}
+</script>
+{% endblock %}

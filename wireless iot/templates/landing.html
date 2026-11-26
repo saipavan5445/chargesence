@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+
+{% block title %}ChargeSense – Intelligent Charging Prediction{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell-container my-4">
+    <div class="editorial-card p-4 p-md-5" style="border-radius: 24px;">
+        <div class="row align-items-center gy-5">
+            <!-- Left Column: Editorial Headline & Copy -->
+            <div class="col-lg-6">
+                <div class="font-monospace fw-bold small text-uppercase mb-2" style="color: var(--theme-ochre-dark); font-size: 0.74rem; letter-spacing: 0.12em;">
+                    <i class="fa-solid fa-bolt-lightning me-1"></i> WINDOWS ACPI TELEMETRY &bull; EST. 2026
+                </div>
+
+                <h1 class="heading-font fw-bold mb-3" style="font-size: 3rem; line-height: 1.15; color: var(--text-primary);">
+                    ChargeSense <br>
+                    <span style="color: var(--theme-spruce);">Intelligent Charging Prediction</span>
+                </h1>
+
+                <p class="lead small mb-4" style="color: var(--text-secondary); font-size: 1.05rem; line-height: 1.65; max-width: 520px;">
+                    Lithium-ion cells degrade rapidly when continually forced up to 100%. ChargeSense tracks real-time Windows ACPI hardware curves, calculates non-linear CC-CV saturation, and triggers an <strong>acoustic speaker buzzer</strong> and <strong>Twilio SMS notification</strong> the second your health target is reached.
+                </p>
+
+                <div class="d-flex align-items-center flex-wrap gap-3">
+                    <a href="{{ url_for('dashboard.dashboard_view') }}" class="btn btn-spruce-primary px-4 py-2">
+                        Open Live Monitor <i class="fa-solid fa-arrow-down ms-1"></i>
+                    </a>
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-ochre px-4 py-2">
+                        Register with Gmail &rarr;
+                    </a>
+                </div>
+
+                <!-- Spec Badges -->
+                <div class="d-flex flex-wrap gap-4 mt-5 pt-3 border-top font-monospace" style="border-color: var(--border-color) !important; font-size: 0.76rem; letter-spacing: 0.06em; color: var(--text-muted);">
+                    <div><i class="fa-solid fa-laptop text-info me-1"></i> WINDOWS ACPI SYNC</div>
+                    <div><i class="fa-solid fa-bell text-warning me-1"></i> MOTHERBOARD BUZZER</div>
+                    <div><i class="fa-solid fa-comment-sms text-danger me-1"></i> TWILIO SMS DISPATCH</div>
+                </div>
+            </div>
+
+            <!-- Right Column: Tactile Showcase Display -->
+            <div class="col-lg-6">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <div class="top-metric-card card-ochre p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="top-metric-label">80% HEALTH CEILING</span>
+                                <span class="badge bg-white text-dark font-monospace py-1 px-2">PROTECTION ACTIVE</span>
+                            </div>
+                            <div class="top-metric-val">3x Pack Longevity</div>
+                            <div class="top-metric-sub">
+                                Stops high-voltage oxidation and preserves cell chemistry.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <div class="top-metric-card card-spruce-dark p-3">
+                            <div class="top-metric-label">LIVE ACPI TELEMETRY</div>
+                            <div class="top-metric-val" style="font-size: 1.8rem;">85.0% SoC</div>
+                            <div class="top-metric-sub">
+                                4.12 V &bull; 33.5°C &bull; +2.0%/m
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <div class="top-metric-card card-spruce-navy p-3">
+                            <div class="top-metric-label">AUTOMATED ALERTS</div>
+                            <div class="top-metric-val" style="font-size: 1.8rem;">SMS &amp; Buzzer</div>
+                            <div class="top-metric-sub">
+                                Authenticated cellular dispatch.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3 Architecture Highlights -->
+        <div class="row g-4 mt-5 pt-4 border-top" style="border-color: var(--border-color) !important;">
+            <div class="col-md-4">
+                <div class="p-3 rounded-3" style="background: var(--bg-tile);">
+                    <div class="font-monospace fw-bold text-muted small text-uppercase mb-2">01 &bull; CUTOFF PRESERVATION</div>
+                    <h5 class="heading-font fw-bold mb-2" style="color: var(--theme-spruce);">80% Health Ceiling</h5>
+                    <p class="text-secondary small mb-0" style="line-height: 1.6;">
+                        Overcharging damages lithium cells. ChargeSense alerts you at 80% to retain up to 3x longer pack longevity.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="p-3 rounded-3" style="background: var(--bg-tile);">
+                    <div class="font-monospace fw-bold text-muted small text-uppercase mb-2">02 &bull; NON-LINEAR SATURATION</div>
+                    <h5 class="heading-font fw-bold mb-2" style="color: var(--theme-spruce);">AI CC-CV Regressor</h5>
+                    <p class="text-secondary small mb-0" style="line-height: 1.6;">
+                        Models the real physical shift from constant current to constant voltage saturation, giving you accurate estimates.
+                    </p>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="p-3 rounded-3" style="background: var(--bg-tile);">
+                    <div class="font-monospace fw-bold text-muted small text-uppercase mb-2">03 &bull; INSTANT ALERTS</div>
+                    <h5 class="heading-font fw-bold mb-2" style="color: var(--theme-spruce);">Twilio SMS &amp; Buzzer</h5>
+                    <p class="text-secondary small mb-0" style="line-height: 1.6;">
+                        Sounds a continuous motherboard buzzer alarm and dispatches an authenticated cellular SMS the instant target is met.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

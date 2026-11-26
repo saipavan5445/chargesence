@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Notifications – ChargeSense{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold text-light mb-1">Notification Center</h2>
+            <p class="text-secondary small mb-0">System alerts, charging milestone reminders, and battery safety warnings.</p>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <button class="btn btn-outline-custom btn-sm" onclick="markAllRead()">
+                <i class="fa-solid fa-check-double text-info me-1"></i> Mark All as Read
+            </button>
+            <button class="btn btn-outline-custom btn-sm text-danger" onclick="clearAllNotifications()">
+                <i class="fa-solid fa-trash me-1"></i> Clear All
+            </button>
+        </div>
+    </div>
+
+    <div class="glass-card p-4">
+        {% if notifications %}
+        <div class="d-flex flex-column gap-3" id="notificationsContainer">
+            {% for n in notifications %}
+            <div class="p-3 rounded-3 d-flex align-items-start justify-content-between gap-3 {% if not n.is_read %}border border-primary-subtle{% else %}border border-secondary-subtle opacity-75{% endif %}" style="background: rgba(15, 23, 42, 0.6);" id="notif-{{ n.id }}">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="stat-icon mt-1 {% if n.notification_type == 'success' %}bg-success-subtle text-success{% elif n.notification_type == 'danger' %}bg-danger-subtle text-danger{% elif n.notification_type == 'warning' %}bg-warning-subtle text-warning{% else %}bg-info-subtle text-info{% endif %}" style="width: 36px; height: 36px; font-size: 1rem;">
+                        <i class="fa-solid {% if n.notification_type == 'success' %}fa-circle-check{% elif n.notification_type == 'danger' %}fa-triangle-exclamation{% elif n.notification_type == 'warning' %}fa-triangle-exclamation{% else %}fa-circle-info{% endif %}"></i>
+                    </div>
+                    <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="fw-bold text-light">{{ n.title }}</span>
+                            {% if not n.is_read %}
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" style="font-size: 0.65rem;">NEW</span>
+                            {% endif %}
+                        </div>
+                        <div class="text-secondary small mt-1">{{ n.message }}</div>
+                        <div class="text-muted small mt-2" style="font-size: 0.72rem;">
+                            <i class="fa-regular fa-clock me-1"></i>{{ n.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                        </div>
+                    </div>
+                </div>
+
+                {% if not n.is_read %}
+                <button class="btn btn-outline-custom btn-sm py-1 px-2" onclick="markSingleRead({{ n.id }})" title="Mark as Read">
+                    <i class="fa-solid fa-check text-info"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+            <i class="fa-regular fa-bell-slash fs-1 mb-3"></i>
+            <h5 class="text-light">No notifications logged</h5>
+            <p class="small">Milestone notifications will appear here during live battery simulations.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markSingleRead(id) {
+    fetch(`/api/notifications/${id}/read`, { method: 'POST' })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                const el = document.getElementById(`notif-${id}`);
+                if (el) {
+                    el.classList.remove('border-primary-subtle');
+                    el.classList.add('border-secondary-subtle', 'opacity-75');
+                    const badge = el.querySelector('.badge');
+                    if (badge) badge.remove();
+                    const btn = el.querySelector('button');
+                    if (btn) btn.remove();
+                }
+                showToast('Updated', 'Notification marked as read.', 'info');
+            }
+        });
+}
+
+function markAllRead() {
+    fetch('/api/notifications/mark-all-read', { method: 'POST' })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                location.reload();
+            }
+        });
+}
+
+function clearAllNotifications() {
+    if (confirm('Are you sure you want to delete all notifications?')) {
+        fetch('/api/notifications/clear', { method: 'POST' })
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    location.reload();
+                }
+            });
+    }
+}
+</script>
+{% endblock %}

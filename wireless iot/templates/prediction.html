@@ -1,0 +1,305 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Charging Prediction Lab – ChargeSense{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header with Matching Cormorant Garamond / Editorial Typography -->
+    <div class="workspace-header mb-4">
+        <div class="workspace-subtitle">
+            <i class="fa-solid fa-microchip me-1"></i> Empirical CC-CV Physics Regression
+        </div>
+        <h1 class="workspace-title mb-1">Intelligent Charging-Time Prediction Lab</h1>
+        <p class="text-muted small mb-0" style="color: var(--ink-secondary) !important;">
+            Compare linear baseline mathematical equations against empirical non-linear Constant Current / Constant Voltage (CC-CV) machine learning models.
+        </p>
+    </div>
+
+    <div class="row g-4">
+        <!-- Input Parameters Panel -->
+        <div class="col-lg-5">
+            <div class="card-panel h-100">
+                <div class="card-panel-header">
+                    <div>
+                        <span class="card-panel-label" style="color: var(--spruce);">INPUT CONFIGURATION</span>
+                        <h4 class="card-panel-title mb-0">Prediction Parameters</h4>
+                    </div>
+                    <span class="speed-badge">SIMULATION PARAMS</span>
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-bold mb-0" style="color: var(--ink);">Current Battery Level:</label>
+                        <span id="labCurrentDisplay" class="font-monospace fw-bold" style="color: var(--spruce); font-size: 1.1rem;">{{ telemetry.current_percentage }}%</span>
+                    </div>
+                    <input type="range" class="form-range" id="labCurrentSlider" min="0" max="95" step="1" value="{{ telemetry.current_percentage }}">
+                </div>
+
+                <div class="mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <label class="form-label small fw-bold mb-0" style="color: var(--ink);">Target Battery Level (Safe Limit):</label>
+                        <span id="labTargetDisplay" class="font-monospace fw-bold" style="color: var(--ochre-dark); font-size: 1.1rem;">{{ telemetry.target_percentage }}%</span>
+                    </div>
+                    <input type="range" class="form-range" id="labTargetSlider" min="10" max="100" step="5" value="{{ telemetry.target_percentage }}">
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold mb-2" style="color: var(--ink);">Charging Speed Scenario:</label>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="scenario-btn flex-fill {% if telemetry.charging_speed == 'slow' %}active{% endif %}" onclick="selectSpeed('slow', this)">
+                            <i class="fa-solid fa-battery-quarter me-1"></i> Slow<br>
+                            <small style="font-size: 0.7rem;">0.5%/min (5W)</small>
+                        </button>
+                        <button type="button" class="scenario-btn flex-fill {% if telemetry.charging_speed == 'normal' %}active{% endif %}" onclick="selectSpeed('normal', this)">
+                            <i class="fa-solid fa-battery-half me-1"></i> Normal<br>
+                            <small style="font-size: 0.7rem;">1.0%/min (15W)</small>
+                        </button>
+                        <button type="button" class="scenario-btn flex-fill {% if telemetry.charging_speed == 'fast' %}active{% endif %}" onclick="selectSpeed('fast', this)">
+                            <i class="fa-solid fa-battery-full me-1"></i> Fast<br>
+                            <small style="font-size: 0.7rem;">2.0%/min (30W+)</small>
+                        </button>
+                    </div>
+                    <input type="hidden" id="selectedSpeedInput" value="{{ telemetry.charging_speed }}">
+                </div>
+
+                <button type="button" class="btn btn-brand w-100 py-2 mb-4" onclick="executePrediction()">
+                    <i class="fa-solid fa-calculator me-2"></i>Compute Prediction
+                </button>
+
+                <!-- ML Model Quality Metrics Badge -->
+                <div class="p-3 rounded-3" style="background: var(--surface-warm); border: 1px solid var(--border);">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="font-monospace fw-bold" style="font-size: 0.68rem; letter-spacing: 0.08em; color: var(--ink-muted);">MODEL EVALUATION METRICS</span>
+                        <span class="status-chip status-done">TRAINED MODEL</span>
+                    </div>
+                    <div class="row g-2 text-center">
+                        <div class="col-4">
+                            <div class="font-monospace" style="font-size: 0.65rem; color: var(--ink-muted);">R² SCORE</div>
+                            <div class="fw-bold font-monospace" style="font-size: 1.05rem; color: var(--spruce);">{{ metrics.r2_score }}</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="font-monospace" style="font-size: 0.65rem; color: var(--ink-muted);">MAE</div>
+                            <div class="fw-bold font-monospace" style="font-size: 1.05rem; color: var(--ink);">{{ metrics.mae_minutes }} <span style="font-size: 0.7rem; font-weight: normal;">min</span></div>
+                        </div>
+                        <div class="col-4">
+                            <div class="font-monospace" style="font-size: 0.65rem; color: var(--ink-muted);">RMSE</div>
+                            <div class="fw-bold font-monospace" style="font-size: 1.05rem; color: var(--ochre-dark);">{{ metrics.rmse_minutes }} <span style="font-size: 0.7rem; font-weight: normal;">min</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Output Cards: Baseline vs AI Model -->
+        <div class="col-lg-7">
+            <div class="row g-4">
+                <!-- Baseline Formula Card -->
+                <div class="col-md-6">
+                    <div class="card-panel h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge rounded-pill" style="background: rgba(59,91,86,0.12); color: var(--spruce); font-family: 'JetBrains Mono'; font-size: 0.68rem; font-weight: 700; border: 1px solid rgba(59,91,86,0.25);">
+                                BASELINE ALGORITHM
+                            </span>
+                            <span class="font-monospace small" style="font-size: 0.72rem; color: var(--ink-muted);">Linear Formula</span>
+                        </div>
+                        <div class="font-monospace text-uppercase fw-semibold mt-2" style="font-size: 0.7rem; color: var(--ink-muted); letter-spacing: 0.08em;">Predicted Duration</div>
+                        <div class="my-2" style="font-family: 'Cormorant Garamond', serif; font-size: 2.8rem; font-weight: 700; color: var(--ink); line-height: 1;">
+                            <span id="baselineMinsDisplay">{{ initial_calc.baseline.remaining_minutes }}</span>
+                            <span class="fs-6 fw-normal" style="color: var(--ink-muted); font-family: 'Inter', sans-serif;">min</span>
+                        </div>
+                        <div class="small mb-3" id="baselineClockDisplay" style="color: var(--ink-secondary); font-size: 0.8rem;">
+                            <i class="fa-regular fa-clock me-1"></i>Est. Completion: {{ initial_calc.baseline.completion_time_str }}
+                        </div>
+
+                        <div class="math-box">
+                            <span id="baselineEquationDisplay">{{ initial_calc.baseline.formula }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI / Empirical CC-CV Regressor Card -->
+                <div class="col-md-6">
+                    <div class="card-panel card-panel-highlight h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="badge rounded-pill" style="background: rgba(212,148,58,0.18); color: var(--ochre-dark); font-family: 'JetBrains Mono'; font-size: 0.68rem; font-weight: 700; border: 1px solid rgba(212,148,58,0.3);">
+                                AI / CC-CV MODEL
+                            </span>
+                            <span class="font-monospace small" style="font-size: 0.72rem; color: var(--ink-muted);">Non-Linear Physics</span>
+                        </div>
+                        <div class="font-monospace text-uppercase fw-semibold mt-2" style="font-size: 0.7rem; color: var(--ink-muted); letter-spacing: 0.08em;">AI Predicted Duration</div>
+                        <div class="my-2" style="font-family: 'Cormorant Garamond', serif; font-size: 2.8rem; font-weight: 700; color: var(--spruce); line-height: 1;">
+                            <span id="mlMinsDisplay">{{ initial_calc.ml.ml_minutes }}</span>
+                            <span class="fs-6 fw-normal" style="color: var(--ink-muted); font-family: 'Inter', sans-serif;">min</span>
+                        </div>
+                        <div class="small mb-3" id="mlClockDisplay" style="color: var(--ink-secondary); font-size: 0.8rem;">
+                            <i class="fa-regular fa-clock me-1"></i>Est. Completion: {{ initial_calc.ml.completion_time_str }}
+                        </div>
+
+                        <div class="diff-box">
+                            <i class="fa-solid fa-code-compare me-1" style="color: var(--ochre);"></i>
+                            <span id="diffDisplay" class="fw-bold" style="color: var(--spruce);">
+                                {% if initial_calc.difference_minutes > 0 %}+{% endif %}{{ initial_calc.difference_minutes }} min
+                            </span>
+                            <span class="text-muted" style="font-size: 0.75rem;"> (Lithium-ion CC-CV taper)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Multi-Scenario Comparison Table -->
+                <div class="col-12">
+                    <div class="card-panel">
+                        <div class="card-panel-header">
+                            <div>
+                                <span class="card-panel-label" style="color: var(--spruce);">SCENARIO MATRIX</span>
+                                <h6 class="card-panel-title mb-0">Charging Scenarios Comparison</h6>
+                            </div>
+                            <span class="live-badge"><span class="pulse-dot"></span> BENCHMARK</span>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>SCENARIO</th>
+                                        <th>RATE</th>
+                                        <th>BASELINE TIME</th>
+                                        <th>AI CC-CV TIME</th>
+                                        <th>ESTIMATED FINISH</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="scenarioTableBody">
+                                    {% for speed, sc in initial_calc.scenarios.items() %}
+                                    <tr>
+                                        <td>
+                                            <strong style="color: var(--ink);">{{ speed.capitalize() }} Charging</strong>
+                                        </td>
+                                        <td>
+                                            <span class="speed-badge">{{ sc.rate }} %/min</span>
+                                        </td>
+                                        <td class="cell-mono">
+                                            {{ sc.baseline_minutes }} min
+                                        </td>
+                                        <td>
+                                            <strong style="color: var(--spruce); font-family: 'JetBrains Mono', monospace;">{{ sc.ml_minutes }} min</strong>
+                                        </td>
+                                        <td>
+                                            <span class="clock-badge">
+                                                <i class="fa-regular fa-clock me-1"></i>{{ sc.completion_time }}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Natural Language Insights -->
+                <div class="col-12">
+                    <div class="card-panel">
+                        <div class="card-panel-header">
+                            <div>
+                                <span class="card-panel-label" style="color: var(--ochre-dark);">PHYSICS ENGINE FINDINGS</span>
+                                <h6 class="card-panel-title mb-0">Analytical Observations</h6>
+                            </div>
+                        </div>
+                        <ul class="mb-0 ps-3" id="insightsList" style="color: var(--ink-secondary); font-size: 0.85rem; line-height: 1.7;">
+                            {% for ins in initial_calc.insights %}
+                            <li class="mb-1">{{ ins }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const currentSlider = document.getElementById('labCurrentSlider');
+const targetSlider = document.getElementById('labTargetSlider');
+const currentDisplay = document.getElementById('labCurrentDisplay');
+const targetDisplay = document.getElementById('labTargetDisplay');
+const speedInput = document.getElementById('selectedSpeedInput');
+
+currentSlider.addEventListener('input', () => {
+    currentDisplay.textContent = `${currentSlider.value}%`;
+    if (parseFloat(currentSlider.value) >= parseFloat(targetSlider.value)) {
+        targetSlider.value = Math.min(100, parseFloat(currentSlider.value) + 5);
+        targetDisplay.textContent = `${targetSlider.value}%`;
+    }
+});
+
+targetSlider.addEventListener('input', () => {
+    targetDisplay.textContent = `${targetSlider.value}%`;
+    if (parseFloat(targetSlider.value) <= parseFloat(currentSlider.value)) {
+        currentSlider.value = Math.max(0, parseFloat(targetSlider.value) - 5);
+        currentDisplay.textContent = `${currentSlider.value}%`;
+    }
+});
+
+function selectSpeed(speed, btnElement) {
+    speedInput.value = speed;
+    document.querySelectorAll('.scenario-btn').forEach(btn => btn.classList.remove('active'));
+    if (btnElement) {
+        btnElement.classList.add('active');
+    }
+}
+
+function executePrediction() {
+    const current = parseFloat(currentSlider.value);
+    const target = parseFloat(targetSlider.value);
+    const speed = speedInput.value;
+
+    fetch('/api/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            current_percentage: current,
+            target_percentage: target,
+            charging_speed: speed,
+            save_record: true
+        })
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (!res.success) {
+            showToast('Error', res.error, 'danger');
+            return;
+        }
+
+        const data = res.data;
+        document.getElementById('baselineMinsDisplay').textContent = data.baseline.remaining_minutes;
+        document.getElementById('baselineClockDisplay').innerHTML = `<i class="fa-regular fa-clock me-1"></i>Est. Completion: ${data.baseline.completion_time_str}`;
+        document.getElementById('baselineEquationDisplay').textContent = data.baseline.formula;
+
+        document.getElementById('mlMinsDisplay').textContent = data.ml.ml_minutes;
+        document.getElementById('mlClockDisplay').innerHTML = `<i class="fa-regular fa-clock me-1"></i>Est. Completion: ${data.ml.completion_time_str}`;
+
+        const sign = data.difference_minutes > 0 ? '+' : '';
+        document.getElementById('diffDisplay').textContent = `${sign}${data.difference_minutes} min`;
+
+        // Update scenarios table with high-contrast editorial theme classes
+        const tbody = document.getElementById('scenarioTableBody');
+        tbody.innerHTML = Object.entries(data.scenarios).map(([mode, s]) => `
+            <tr>
+                <td><strong style="color: var(--ink);">${mode.charAt(0).toUpperCase() + mode.slice(1)} Charging</strong></td>
+                <td><span class="speed-badge">${s.rate} %/min</span></td>
+                <td class="cell-mono">${s.baseline_minutes} min</td>
+                <td><strong style="color: var(--spruce); font-family: 'JetBrains Mono', monospace;">${s.ml_minutes} min</strong></td>
+                <td><span class="clock-badge"><i class="fa-regular fa-clock me-1"></i>${s.completion_time}</span></td>
+            </tr>
+        `).join('');
+
+        // Update insights
+        const list = document.getElementById('insightsList');
+        list.innerHTML = data.insights.map(i => `<li class="mb-1">${i}</li>`).join('');
+
+        showToast('Prediction Calculated', `Saved calculation #${res.data.saved_record_id || ''} to database.`, 'success');
+    })
+    .catch(() => showToast('Error', 'Failed to calculate prediction.', 'danger'));
+}
+</script>
+{% endblock %}

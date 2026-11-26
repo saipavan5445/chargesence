@@ -1,0 +1,429 @@
+{% extends 'base.html' %}
+
+{% block title %}Live Battery Monitor – ChargeSense – Intelligent Charging Prediction{% endblock %}
+
+{% block content %}
+<div class="dashboard-shell">
+    <div class="golden-accent-orb"></div>
+    <div class="dashboard-frame">
+        <aside class="sidebar">
+            <div class="sidebar-profile">
+                <div class="sidebar-avatar"><i class="fa-solid fa-bolt-lightning text-warning"></i></div>
+                <div class="sidebar-name">ChargeSense</div>
+                <div class="sidebar-email">Intelligent Charging Prediction</div>
+            </div>
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard.dashboard_view') }}" class="sidebar-link active"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+                <a href="{{ url_for('prediction.prediction_view') }}" class="sidebar-link"><i class="fa-solid fa-microchip"></i><span>Predictions</span></a>
+                <a href="{{ url_for('analytics.analytics_view') }}" class="sidebar-link"><i class="fa-solid fa-chart-pie"></i><span>Analytics</span></a>
+                <a href="{{ url_for('history.history_view') }}" class="sidebar-link"><i class="fa-solid fa-clock-rotate-left"></i><span>History</span></a>
+                <a href="{{ url_for('notifications.notifications_view') }}" class="sidebar-link"><i class="fa-solid fa-bell"></i><span>Notifications</span></a>
+                <a href="{{ url_for('settings.settings_view') }}" class="sidebar-link"><i class="fa-solid fa-sliders"></i><span>Settings</span></a>
+            </nav>
+            <div class="sidebar-hw-widget">
+                <div class="hw-widget-header"><span>CONNECTED HARDWARE</span><span class="pulse-dot"></span></div>
+                <div class="hw-widget-body">
+                    <div class="hw-icon-circle"><i class="fa-solid fa-microchip"></i></div>
+                    <div><div class="hw-label">HP ACPI ACTIVE</div><div class="hw-sub">Live Synchronized</div></div>
+                </div>
+                <svg viewBox="0 0 200 36" class="hw-circuit-svg"><path d="M10,18 Q55,4 100,18 T190,18" fill="none" stroke="#D4943A" stroke-width="1.5" stroke-dasharray="3,3"/><circle cx="10" cy="18" r="3" fill="#D4943A"/><circle cx="100" cy="18" r="4" fill="#ffffff"/><circle cx="190" cy="18" r="3" fill="#D4943A"/></svg>
+            </div>
+        </aside>
+
+        <div class="workspace">
+            <div class="workspace-header">
+                <div class="workspace-subtitle">INTELLIGENT CHARGING PREDICTION &bull; ACPI HARDWARE &bull; EMAIL NOTIFICATIONS</div>
+                <h2 class="workspace-title">ChargeSense – Intelligent Charging Prediction</h2>
+            </div>
+
+            <!-- ACTIVE BUZZER ALARM BANNER (Appears when target is reached & buzzer sounds) -->
+            <div id="activeBuzzerBanner" class="buzzer-alarm-banner" style="display:none;">
+                <div class="d-flex align-items-center gap-3">
+                    <span class="buzzer-pulse-icon"><i class="fa-solid fa-volume-high"></i></span>
+                    <div>
+                        <div class="fw-bold" style="font-size:0.95rem;letter-spacing:0.02em;">TARGET REACHED &bull; BUZZER ALARM ACTIVE</div>
+                        <div class="small opacity-85">Battery reached target limit. Unplug AC charger to automatically silence, or click Turn Off.</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-turnoff-buzzer" onclick="muteBuzzer()">
+                    <i class="fa-solid fa-volume-xmark me-1"></i> Turn Off Buzzer
+                </button>
+            </div>
+
+            <!-- TOP 3 STAT CARDS -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-4">
+                    <div class="stat-card stat-ochre">
+                        <div class="stat-label">CHARGING TARGET</div>
+                        <div class="stat-value" id="topTargetVal">{{ default_target }}%</div>
+                        <div class="stat-sub"><i class="fa-solid fa-shield-heart"></i> Smart Health Mode (3× Life)</div>
+                        <i class="fa-solid fa-bolt-lightning stat-icon-bg"></i>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card stat-spruce">
+                        <div class="stat-label">HARDWARE SOC &bull; HP ACPI</div>
+                        <div class="stat-value" id="topBatteryVal">{{ telemetry.current_percentage }}%</div>
+                        <div class="stat-sub"><span class="stat-speed-badge">{{ telemetry.charging_speed.upper() }} (~{{ telemetry.charging_rate }}%/m)</span></div>
+                        <i class="fa-solid fa-microchip stat-icon-bg"></i>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-card stat-teal">
+                        <div class="stat-label">EMAIL NOTIFICATION &amp; BUZZER</div>
+                        <div class="stat-value" id="topEmailVal" style="font-size:1.1rem; word-break: break-all; margin: 8px 0 4px;">{{ notification_email }}</div>
+                        <div class="stat-sub"><i class="fa-solid fa-envelope text-warning me-1"></i> Automated Target Alert Dispatched</div>
+                        <i class="fa-solid fa-envelope-circle-check stat-icon-bg"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MAIN TWO-COLUMN GRID -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-7">
+                    <!-- Power Cell Card -->
+                    <div class="card-panel mb-4">
+                        <div class="card-panel-header">
+                            <div><span class="card-panel-label">POWER CELL TELEMETRY</span><h5 class="card-panel-title">Live Battery Monitor</h5></div>
+                            <span id="batterySpeedBadge" class="speed-badge">{{ telemetry.charging_speed.upper() }}</span>
+                        </div>
+                        <div class="battery-display">
+                            <div id="batteryPctDisplay" class="battery-pct">{{ telemetry.current_percentage }}%</div>
+                            <div id="batterySourceSubtitle" class="battery-source">
+                                {% if telemetry.telemetry_source == 'laptop' %}
+                                    {% if telemetry.ac_plugged %}
+                                    <span class="source-badge source-live"><i class="fa-solid fa-plug-circle-check text-success me-1"></i> Physical Windows ACPI Hardware &bull; <strong class="text-success">Charging Connected</strong></span>
+                                    {% else %}
+                                    <span class="source-badge source-live"><i class="fa-solid fa-plug-circle-xmark text-danger me-1"></i> Physical Windows ACPI Hardware &bull; <strong class="text-danger">Charging Not Connected</strong></span>
+                                    {% endif %}
+                                {% else %}
+                                <span class="source-badge source-sim">Simulated Li-ion 4000mAh</span>
+                                {% endif %}
+                            </div>
+                            <div class="battery-bar position-relative"><div id="batteryFluid" class="battery-fill" style="width:{{ telemetry.current_percentage }}%"></div><span id="batteryBarPct" class="battery-bar-pct">{{ telemetry.current_percentage }}%</span></div>
+                            <div class="mt-2 text-center">
+                                <button id="buzzerPillBtn" type="button" class="btn-buzzer-pill" style="display:none;" onclick="muteBuzzer()">
+                                    <i class="fa-solid fa-volume-xmark me-1"></i> Turn Off Buzzer
+                                </button>
+                            </div>
+                        </div>
+                        <div class="mode-switcher">
+                            <div class="mode-btn-group">
+                                <button type="button" id="btnModeLaptop" class="mode-btn mode-active" onclick="switchTelemetryMode('laptop')"><i class="fa-solid fa-laptop"></i> Live Laptop</button>
+                                <button type="button" id="btnModeSim" class="mode-btn" onclick="switchTelemetryMode('simulation')"><i class="fa-solid fa-flask"></i> Simulation</button>
+                            </div>
+                        </div>
+                        <div class="row g-2 my-3">
+                            <div class="col-4"><div class="sensor-tile"><div class="sensor-label">VOLTAGE</div><div id="batteryVoltage" class="sensor-value">{{ telemetry.voltage }} V</div></div></div>
+                            <div class="col-4"><div class="sensor-tile"><div class="sensor-label">TEMP</div><div id="batteryTemp" class="sensor-value">{{ telemetry.temperature }} °C</div></div></div>
+                            <div class="col-4"><div class="sensor-tile"><div class="sensor-label">RATE</div><div id="batteryRate" class="sensor-value sensor-accent">{{ telemetry.charging_rate }} %/m</div></div></div>
+                        </div>
+                        <div class="target-section">
+                            <div class="target-header">
+                                <label class="target-label">CUT-OFF TARGET:</label>
+                                <span id="targetBatteryValue" class="target-badge">{{ default_target }}%</span>
+                            </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-4"><button type="button" class="preset-btn {% if default_target == 80 %}active{% endif %}" onclick="setTargetPreset(80)"><div class="preset-val">80%</div><div class="preset-sub">Health Mode</div></button></div>
+                                <div class="col-4"><button type="button" class="preset-btn {% if default_target == 90 %}active{% endif %}" onclick="setTargetPreset(90)"><div class="preset-val">90%</div><div class="preset-sub">Daily High</div></button></div>
+                                <div class="col-4"><button type="button" class="preset-btn {% if default_target == 100 %}active{% endif %}" onclick="setTargetPreset(100)"><div class="preset-val">100%</div><div class="preset-sub">Full Charge</div></button></div>
+                            </div>
+                            <input type="range" class="form-range my-2" id="targetBatterySlider" min="20" max="100" step="5" value="{{ default_target }}">
+                            <div class="mb-3">
+                                <label class="scenario-label">SCENARIO:</label>
+                                <select class="form-select form-select-sm scenario-select" id="chargingSpeedSelect">
+                                    <option value="slow" {% if telemetry.charging_speed == 'slow' %}selected{% endif %}>🔋 Slow USB (~0.5%/min • 5W)</option>
+                                    <option value="normal" {% if telemetry.charging_speed == 'normal' %}selected{% endif %}>⚡ Normal (~1.0%/min • 15W)</option>
+                                    <option value="fast" {% if telemetry.charging_speed == 'fast' %}selected{% endif %}>🚀 Fast (~2.5%/min • 30W+)</option>
+                                    <option value="turbo" {% if telemetry.charging_speed == 'turbo' %}selected{% endif %}>💥 Turbo Demo (~6.0%/min • 65W+)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="action-buttons">
+                            <button id="btnStartSimulation" class="btn-primary-action"><i class="fa-solid fa-play"></i> Start Monitor</button>
+                            <button id="btnStopSimulation" class="btn-secondary-action"><i class="fa-solid fa-pause"></i> Pause</button>
+                            <button id="btnResetSimulation" class="btn-secondary-action d-none"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+                            <button id="btnDischargeSimulation" class="btn-secondary-action d-none"><i class="fa-solid fa-arrow-down"></i> Discharge</button>
+                        </div>
+                    </div>
+
+                    <!-- Recent Sessions -->
+                    <div class="card-panel">
+                        <div class="card-panel-header">
+                            <div><h6 class="card-panel-title mb-0">Recent Sessions</h6><span class="card-panel-sub">Telemetry sessions stored in database</span></div>
+                            <a href="{{ url_for('history.history_view') }}" class="link-arrow">all sessions &rarr;</a>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead><tr><th>SESSION</th><th>USER</th><th>START</th><th>TARGET</th><th>STATUS</th><th>SMS</th></tr></thead>
+                                <tbody>
+                                    {% if recent_sessions %}
+                                    {% for s in recent_sessions[:4] %}
+                                    <tr>
+                                        <td><div class="session-cell"><div class="session-avatar">{{ (current_user.username[:1] if current_user.is_authenticated else 'D')|upper }}</div><div><div class="session-id">#{{ s.id }}</div><div class="session-dur">{{ s.duration_minutes }} min</div></div></div></td>
+                                        <td class="cell-mono">{{ current_user.email or 'demo@gmail.com' }}</td>
+                                        <td class="cell-mono">{{ s.start_percentage }}%</td>
+                                        <td><span class="target-count-badge">{{ s.target_percentage|int }}</span></td>
+                                        <td><span class="status-chip {% if s.status == 'completed' %}status-done{% elif s.status == 'in_progress' %}status-active{% else %}status-warn{% endif %}">{{ s.status.upper() }}</span></td>
+                                        <td>{% if s.sms_sent %}<span class="status-chip status-done"><i class="fa-solid fa-check"></i> SENT</span>{% else %}<span class="status-chip status-standby">STANDBY</span>{% endif %}</td>
+                                    </tr>
+                                    {% endfor %}
+                                    {% else %}
+                                    <tr><td colspan="6" class="empty-row">No recent sessions recorded yet. Start monitoring above!</td></tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN -->
+                <div class="col-lg-5">
+                    <!-- AI Prediction -->
+                    <div class="card-panel mb-4">
+                        <div class="card-panel-header">
+                            <div><span class="card-panel-label" style="color:var(--ochre-dark)">NON-LINEAR CC-CV SATURATION MODEL</span><h4 class="card-panel-title">Estimated Remaining Time</h4></div>
+                            <span id="predCompletionClock" class="clock-badge"><i class="fa-regular fa-clock"></i> Est. Full at {{ telemetry.prediction.completion_time_str }}</span>
+                        </div>
+                        <div class="prediction-display">
+                            <div id="predRemainingMinutes" class="prediction-time">{{ telemetry.prediction.remaining_minutes }}</div>
+                            <div class="prediction-unit">Minutes</div>
+                            <div id="predHoursMins" class="prediction-hm">~{{ telemetry.prediction.hours }}h {{ telemetry.prediction.minutes }}m</div>
+                        </div>
+                        <div class="my-3">
+                            <div class="progress-labels"><span>CURRENT: <strong>{{ telemetry.current_percentage }}%</strong></span><span>TARGET: <strong>{{ default_target }}%</strong></span></div>
+                            <div class="progress-track"><div class="progress-fill" style="width:{{ telemetry.current_percentage }}%"></div></div>
+                        </div>
+                        <div class="chart-section">
+                            <div style="margin-bottom:12px"><h6 class="card-panel-title mb-0">Statistics</h6><span class="card-panel-sub">Baseline vs AI CC-CV Saturation Delta</span></div>
+                            <div style="height:180px"><canvas id="statisticsBarChart"></canvas></div>
+                        </div>
+                    </div>
+
+                    <!-- Email Notification & Buzzer -->
+                    <div class="card-panel card-panel-highlight">
+                        <div class="twilio-header">
+                            <div>
+                                <div class="twilio-title-row">
+                                    <h5 class="card-panel-title mb-0">Email Notification &amp; Buzzer Protection</h5>
+                                    {% if email_configured %}<span class="status-chip status-done">LIVE SMTP</span>{% else %}<span class="status-chip status-warn">AUTOMATED READY</span>{% endif %}
+                                </div>
+                                <div class="twilio-sub">Hardware speaker buzzer + Automated target email. <strong>1 alert per session.</strong></div>
+                            </div>
+                            <div class="sms-toggle-pill">
+                                <span id="emailToggleLabel" class="sms-toggle-label">EMAIL ACTIVE</span>
+                                <div class="form-check form-switch m-0"><input class="form-check-input sms-switch" type="checkbox" id="dashboardEmailToggle" checked onchange="toggleEmailAlerts(this.checked)"></div>
+                            </div>
+                        </div>
+                        <div class="twilio-actions">
+                            <div class="phone-display">
+                                <span class="phone-label"><i class="fa-solid fa-envelope text-warning me-1"></i> TARGET EMAIL:</span>
+                                <span id="dashboardEmailDisplay" class="phone-number" style="font-size: 0.92rem;">{{ notification_email }}</span>
+                                <button type="button" class="phone-edit-link" data-bs-toggle="modal" data-bs-target="#registerEmailModal">[Edit Email]</button>
+                            </div>
+                            <div class="twilio-btn-row">
+                                <button type="button" class="btn-ochre-sm" onclick="testFullAlertAndBuzzer()"><i class="fa-solid fa-volume-high"></i> Test Buzzer</button>
+                                <button type="button" class="btn-danger-sm" onclick="sendTestEmail()"><i class="fa-solid fa-paper-plane"></i> Send Test Email</button>
+                                <button type="button" class="btn-outline-sm" data-bs-toggle="modal" data-bs-target="#emailSetupModal"><i class="fa-solid fa-gear"></i> SMTP Setup</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTTOM ROW: Simple Pie Chart + Simple Bar Graph -->
+            <div class="row g-4 mb-4">
+                <div class="col-lg-5">
+                    <div class="card-panel h-100">
+                        <div class="card-panel-header">
+                            <div>
+                                <span class="card-panel-label" style="color:var(--spruce)">CHARGING HABITS</span>
+                                <h6 class="card-panel-title mb-0">Battery Health Summary</h6>
+                                <span class="card-panel-sub">Based on {{ dashboard_analytics.donut.total_sessions }} past sessions</span>
+                            </div>
+                            <span class="optimal-badge">{{ dashboard_analytics.donut.optimal_pct }}% HEALTHY</span>
+                        </div>
+                        <div style="height:210px;position:relative;">
+                            <canvas id="batteryShareDonutChart"></canvas>
+                        </div>
+                        <div class="mt-3 pt-3 border-top" style="border-color: var(--border-light) !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-1 small">
+                                <span style="color: var(--ink); font-weight: 600;"><i class="fa-solid fa-circle me-1" style="color: #3B5B56; font-size: 0.65rem;"></i> Healthy (75%–85% Limit)</span>
+                                <span class="font-monospace fw-bold" style="color: #3B5B56;">{{ dashboard_analytics.donut.optimal_pct }}%</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-1 small">
+                                <span style="color: var(--ink); font-weight: 600;"><i class="fa-solid fa-circle me-1" style="color: #D4943A; font-size: 0.65rem;"></i> High Charge (&gt;85%)</span>
+                                <span class="font-monospace fw-bold" style="color: #D4943A;">{{ dashboard_analytics.donut.high_pct }}%</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center small">
+                                <span style="color: var(--ink); font-weight: 600;"><i class="fa-solid fa-circle me-1" style="color: #5A9E8F; font-size: 0.65rem;"></i> Stopped Early (&lt;75%)</span>
+                                <span class="font-monospace fw-bold" style="color: #5A9E8F;">{{ dashboard_analytics.donut.partial_pct }}%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="card-panel h-100 position-relative">
+                        <div class="card-panel-header">
+                            <div>
+                                <span class="card-panel-label" style="color:var(--ochre-dark)">RECENT SESSIONS</span>
+                                <h6 class="card-panel-title mb-0">Last 6 Charging Sessions</h6>
+                                <span class="card-panel-sub">Battery % reached in each session</span>
+                            </div>
+                            <span class="live-badge"><span class="pulse-dot"></span> HISTORY</span>
+                        </div>
+                        <div style="height:260px"><canvas id="chargingScheduleWaveChart"></canvas></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- LIVE TELEMETRY CHART -->
+            <div class="card-panel mb-4">
+                <div class="card-panel-header">
+                    <div>
+                        <span class="card-panel-label" style="color:var(--spruce)">CONTINUOUS SAMPLING</span>
+                        <h6 class="card-panel-title mb-0">Live Telemetry Progression</h6>
+                        <span class="card-panel-sub">Continuous percentage sampling with automatic ACPI hardware synchronization</span>
+                    </div>
+                    <span class="live-badge"><span class="pulse-dot"></span> STREAMING</span>
+                </div>
+                <div style="height:220px"><canvas id="dashboardMiniChart"></canvas></div>
+                <div class="d-flex justify-content-between align-items-center mt-2 pt-2 border-top small" style="border-color: var(--border-light) !important;">
+                    <span style="color: var(--ink-secondary); font-size: 0.76rem;">
+                        <i class="fa-solid fa-microchip text-success me-1"></i> Pre-seeded from intermediate battery telemetry points to ensure continuous visibility.
+                    </span>
+                    <span class="font-monospace fw-bold" style="color: var(--ochre-dark); font-size: 0.72rem;">15-POINT BUFFER</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODALS -->
+<div class="modal fade" id="targetCutoffModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title heading-font fw-bold"><i class="fa-solid fa-bolt-lightning text-warning me-2"></i>Target Reached!</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center py-4">
+                <div id="modalBatteryPct" class="display-2 fw-bold" style="color:var(--spruce)">80%</div>
+                <p class="mt-3" style="color:var(--ink-secondary)">Battery has reached the target threshold. Buzzer alarm is active.<br>Please <strong>unplug your charger</strong> to preserve battery health.</p>
+                <div id="modalSmsNotice" class="small text-muted mt-2"></div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0 justify-content-center gap-2">
+                <button type="button" class="btn-turnoff-buzzer w-100 justify-content-center py-3" data-bs-dismiss="modal" onclick="muteBuzzer()">
+                    <i class="fa-solid fa-volume-xmark me-2"></i> Turn Off Buzzer (Charger Unplugged)
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="registerEmailModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div class="modal-header border-bottom-0">
+                <h6 class="modal-title heading-font fw-bold"><i class="fa-solid fa-envelope text-warning me-2"></i>Update Notification Email</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted mb-2">When battery reaches the target cutoff (e.g. 80%), ChargeSense sends an automated notification to this email address.</p>
+                <input type="email" class="form-control" id="quickEmailInput" placeholder="name@example.com" value="{{ notification_email }}">
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn-primary-action w-100" onclick="quickSaveEmail()"><i class="fa-solid fa-check"></i> Save Email Address</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="emailSetupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="background:var(--surface);border:1px solid var(--border);border-radius:16px">
+            <div class="modal-header border-bottom-0">
+                <h6 class="modal-title heading-font fw-bold"><i class="fa-solid fa-paper-plane text-warning me-2"></i>Live Gmail SMTP Setup</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="p-3 rounded mb-3" style="background: var(--surface-warm); border: 1px solid var(--border); font-size: 0.8rem; color: var(--ink-secondary);">
+                    <strong style="color: var(--ink);"><i class="fa-brands fa-google text-danger me-1"></i> How to get Gmail App Password (1 min):</strong>
+                    <ol class="mb-0 ps-3 mt-1" style="line-height: 1.5;">
+                        <li>Open <a href="https://myaccount.google.com/security" target="_blank" style="color: var(--spruce); font-weight: 600;">Google Account Security</a> (ensure 2-Step Verification is ON).</li>
+                        <li>Go to <a href="https://myaccount.google.com/apppasswords" target="_blank" style="color: var(--spruce); font-weight: 600;">App passwords</a>.</li>
+                        <li>Type <strong>ChargeSense</strong> &amp; click <strong>Create</strong>.</li>
+                        <li>Paste the generated <strong>16-letter code</strong> below.</li>
+                    </ol>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Sender Gmail Address</label>
+                    <input type="email" class="form-control" id="smtpUserInput" value="saipavan0965@gmail.com" placeholder="saipavan0965@gmail.com">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label small fw-bold">Gmail 16-Digit App Password</label>
+                    <input type="password" class="form-control" id="smtpPasswordInput" placeholder="abcd efgh ijkl mnop">
+                    <small class="text-muted" style="font-size:0.75rem;">Your regular Gmail password is blocked by Google. You must use a 16-character App Password.</small>
+                </div>
+                <div class="row g-2">
+                    <div class="col-8">
+                        <label class="form-label small fw-bold">SMTP Host</label>
+                        <input type="text" class="form-control form-control-sm" id="smtpHostInput" value="smtp.gmail.com" readonly>
+                    </div>
+                    <div class="col-4">
+                        <label class="form-label small fw-bold">Port</label>
+                        <input type="text" class="form-control form-control-sm" id="smtpPortInput" value="587" readonly>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-top-0 pt-0">
+                <button type="button" class="btn-primary-action w-100" onclick="saveSmtpCredentials()"><i class="fa-solid fa-save"></i> Save &amp; Test Live Email</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden JS Elements -->
+<div id="targetReachedBannerContainer" style="display:none"></div>
+<span id="targetReachedLimitText" style="display:none"></span>
+<span id="targetReachedSmsStatusText" style="display:none"></span>
+<span id="hardwareStatusBadge" style="display:none"></span>
+<span id="liveStatusPill" style="display:none"></span>
+<span id="liveStatusText" style="display:none"></span>
+<span id="predFormulaText" style="display:none"></span>
+<span id="predMlMinutes" style="display:none"></span>
+<span id="predDiffMinutes" style="display:none"></span>
+<span id="dashboardInsightText" style="display:none"></span>
+<button id="btnMuteBuzzer" style="display:none" onclick="muteBuzzer()"></button>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    window.DASHBOARD_ANALYTICS = {{ dashboard_analytics | tojson }};
+</script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}?v=6.0"></script>
+<script>
+function setTargetPreset(val) {
+    const slider = document.getElementById('targetBatterySlider');
+    const display = document.getElementById('targetBatteryValue');
+    const topTarget = document.getElementById('topTargetVal');
+    if (slider) { slider.value = val; slider.dispatchEvent(new Event('input')); }
+    if (display) display.textContent = val + '%';
+    if (topTarget) topTarget.textContent = val + '%';
+    document.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+}
+
+function showToast(title, message, type) {
+    const container = document.getElementById('toastContainer');
+    if (!container) return;
+    const iconMap = { success: 'fa-circle-check text-success', danger: 'fa-triangle-exclamation text-danger', warning: 'fa-circle-exclamation text-warning', info: 'fa-circle-info text-info' };
+    const icon = iconMap[type] || iconMap.info;
+    const toast = document.createElement('div');
+    toast.className = 'toast-item';
+    toast.innerHTML = '<i class="fa-solid ' + icon + ' fs-5"></i><div><div class="fw-bold small">' + title + '</div><div class="small text-muted">' + message + '</div></div>';
+    container.appendChild(toast);
+    setTimeout(function() { toast.style.opacity = '0'; toast.style.transform = 'translateX(100%)'; setTimeout(function() { toast.remove(); }, 300); }, 5000);
+}
+</script>
+{% endblock %}

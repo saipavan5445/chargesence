@@ -1,0 +1,17 @@
+{
+    "algorithm": "Empirical Lithium-Ion CC-CV Non-Linear Regression",
+    "training_samples": 1200,
+    "test_samples": 300,
+    "weights": [
+        -0.4204,
+        1.0862,
+        0.05
+    ],
+    "metrics": {
+        "r2_score": 0.9821,
+        "mae_minutes": 3.11,
+        "rmse_minutes": 5.15,
+        "training_samples": 1200,
+        "algorithm": "Empirical Lithium-Ion CC-CV Non-Linear Regression"
+    }
+}

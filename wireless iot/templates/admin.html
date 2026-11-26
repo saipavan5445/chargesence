@@ -1,0 +1,115 @@
+{% extends 'base.html' %}
+
+{% block title %}System Administrator – ChargeSense{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <div class="d-inline-flex align-items-center gap-2 px-2 py-1 rounded bg-warning-subtle text-warning border border-warning-subtle small fw-bold mb-1">
+                <i class="fa-solid fa-shield-halved"></i> ADMINISTRATOR CONSOLE
+            </div>
+            <h2 class="fw-bold text-light mb-0">System Oversight & User Management</h2>
+        </div>
+        <span class="badge bg-dark border border-secondary text-secondary p-2">
+            Logged in as: <strong class="text-warning">{{ current_user.username }}</strong>
+        </span>
+    </div>
+
+    <!-- System Telemetry Overview Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-sm-6 col-xl-4">
+            <div class="glass-card stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Registered Users</span>
+                    <div class="stat-icon bg-primary-subtle text-primary"><i class="fa-solid fa-users"></i></div>
+                </div>
+                <div class="stat-value text-light">{{ total_users }}</div>
+                <div class="stat-subtitle">Active accounts</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <div class="glass-card stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">System Sessions</span>
+                    <div class="stat-icon bg-success-subtle text-success"><i class="fa-solid fa-bolt"></i></div>
+                </div>
+                <div class="stat-value text-success">{{ total_sessions }}</div>
+                <div class="stat-subtitle">{{ completed_sessions }} completed cycles</div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-4">
+            <div class="glass-card stat-card">
+                <div class="stat-header">
+                    <span class="stat-title">Telemetry Points</span>
+                    <div class="stat-icon bg-info-subtle text-info"><i class="fa-solid fa-database"></i></div>
+                </div>
+                <div class="stat-value text-info">{{ total_readings }}</div>
+                <div class="stat-subtitle">{{ total_predictions }} ML predictions calculated</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Registered Users Management Table -->
+    <div class="glass-card p-4">
+        <h5 class="fw-bold text-light mb-3">User Accounts Directory</h5>
+        <div class="table-responsive">
+            <table class="custom-table">
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Username</th>
+                        <th>Email</th>
+                        <th>Full Name</th>
+                        <th>Role</th>
+                        <th>Registered Date</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    <tr>
+                        <td><strong class="text-info">#{{ u.id }}</strong></td>
+                        <td><span class="fw-bold text-light">{{ u.username }}</span></td>
+                        <td class="text-secondary small">{{ u.email }}</td>
+                        <td>{{ u.full_name or '-' }}</td>
+                        <td>
+                            {% if u.is_admin %}
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                <i class="fa-solid fa-shield-halved me-1"></i> ADMIN
+                            </span>
+                            {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                                USER
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-secondary small">{{ u.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td>
+                            <div class="d-flex gap-2">
+                                {% if u.id != current_user.id %}
+                                <form method="POST" action="{{ url_for('admin.toggle_admin', user_id=u.id) }}">
+                                    <button type="submit" class="btn btn-outline-custom btn-sm py-1 px-2" title="Toggle Admin Role">
+                                        <i class="fa-solid fa-user-shield {% if u.is_admin %}text-warning{% else %}text-secondary{% endif %}"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('admin.delete_user', user_id=u.id) }}" onsubmit="return confirm('Permanently delete user {{ u.username }} and all their sessions?');">
+                                    <button type="submit" class="btn btn-outline-custom btn-sm py-1 px-2 text-danger" title="Delete User">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                                {% else %}
+                                <span class="badge bg-dark border border-secondary text-muted small py-1 px-2">Current Account</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
